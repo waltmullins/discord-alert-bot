@@ -2,15 +2,19 @@ import aiohttp
 import asyncio
 import os
 from dotenv import load_dotenv
+import discord
 
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-CHANNEL_IDS = ["1376787695069827085"]
-
+CHANNEL_IDS = ["1376787695069827085"]  # This is your private server's general channel
 HEADERS = {
     "authorization": DISCORD_TOKEN
 }
+
+intents = discord.Intents.default()
+intents.messages = True
+client = discord.Client(intents=intents)
 
 async def fetch_messages(session, channel_id):
     url = f"https://discord.com/api/v9/channels/{channel_id}/messages?limit=10"
@@ -24,26 +28,27 @@ async def fetch_messages(session, channel_id):
 def parse_alert(message):
     content = message["content"].upper()
     if any(keyword in content for keyword in ["BOUGHT", "SOLD"]):
-        return {
-            "timestamp": message["timestamp"],
-            "author": message["author"]["username"],
-            "content": message["content"]
-        }
+        return f"{message['timestamp']} | {message['author']['username']}: {message['content']}"
     return None
+
+@client.event
+async def on_ready():
+    print(f"Bot is ready as {client.user}")
+    await monitor()
 
 async def monitor():
     async with aiohttp.ClientSession() as session:
+        channel = client.get_channel(int(CHANNEL_IDS[0]))  # Your server's channel
         while True:
-            for channel_id in CHANNEL_IDS:
+            for source_channel in CHANNEL_IDS:
                 try:
-                    messages = await fetch_messages(session, channel_id)
+                    messages = await fetch_messages(session, source_channel)
                     for message in reversed(messages):
                         alert = parse_alert(message)
                         if alert:
-                            print(f"[{alert['timestamp']}] {alert['author']}: {alert['content']}")
+                            await channel.send(alert)
                 except Exception as e:
-                    print(f"Error fetching/parsing messages: {e}")
+                    print(f"Error: {e}")
             await asyncio.sleep(10)
 
-if __name__ == "__main__":
-    asyncio.run(monitor())
+client.run(DISCORD_TOKEN)
