@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-CHANNEL_IDS = ["1337621057552650240", "1303807524788502652"]
+CHANNEL_IDS = ["1376787695069827085"]
 
 HEADERS = {
     "authorization": DISCORD_TOKEN
