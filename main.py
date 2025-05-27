@@ -6,15 +6,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-SOURCE_CHANNEL_IDS = ["1373261075952058240", "1380380752488502652"]  # Trade With Insight alert channels
-TARGET_CHANNEL_ID = "1376787695069827085"  # Big Mully's server #general channel ID
+CHANNEL_IDS = [
+    "1376787695069827085",  # Big Mully's server (your bot's private alert relay)
+    "1303807524788502652"   # analyst-sarang alerts from TWI
+]
 
 HEADERS = {
-    "Authorization": f"Bot {DISCORD_TOKEN}"
+    "authorization": DISCORD_TOKEN
 }
 
 async def fetch_messages(session, channel_id):
-    url = f"https://discord.com/api/v10/channels/{channel_id}/messages?limit=10"
+    url = f"https://discord.com/api/v9/channels/{channel_id}/messages?limit=10"
     async with session.get(url, headers=HEADERS) as response:
         if response.status == 200:
             return await response.json()
@@ -32,25 +34,16 @@ def parse_alert(message):
         }
     return None
 
-async def send_alert(session, content):
-    url = f"https://discord.com/api/v10/channels/{TARGET_CHANNEL_ID}/messages"
-    payload = {"content": content}
-    async with session.post(url, json=payload, headers=HEADERS) as response:
-        if response.status != 200:
-            print(f"Failed to send message: {response.status}")
-
 async def monitor():
     async with aiohttp.ClientSession() as session:
         while True:
-            for channel_id in SOURCE_CHANNEL_IDS:
+            for channel_id in CHANNEL_IDS:
                 try:
                     messages = await fetch_messages(session, channel_id)
                     for message in reversed(messages):
                         alert = parse_alert(message)
                         if alert:
-                            formatted = f"[{alert['timestamp']}] {alert['author']}: {alert['content']}"
-                            print(formatted)
-                            await send_alert(session, formatted)
+                            print(f"[{alert['timestamp']}] {alert['author']}: {alert['content']}")
                 except Exception as e:
                     print(f"Error fetching/parsing messages: {e}")
             await asyncio.sleep(10)
