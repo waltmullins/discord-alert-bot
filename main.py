@@ -1,5 +1,9 @@
 import aiohttp
 import asyncio
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 CHANNEL_IDS = ["1337621057552650240", "1303807524788502652"]
@@ -9,7 +13,7 @@ HEADERS = {
 }
 
 async def fetch_messages(session, channel_id):
-    url = f"https://discord.com/api/v10/channels/{channel_id}/messages?limit=10"
+    url = f"https://discord.com/api/v9/channels/{channel_id}/messages?limit=10"
     async with session.get(url, headers=HEADERS) as response:
         if response.status == 200:
             return await response.json()
